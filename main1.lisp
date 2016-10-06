@@ -23,8 +23,8 @@
 
 (defun print-square (verts player-loc row column)
   (let ((value (aref verts row column)))
-	 (format t (cond ((equal player-loc (cons row column)) "@")
-					  ((= value 1) " ")
+	 (format t (cond ((equal player-loc (list row column)) "@")
+					  ((= value 1) ".")
 					  ((= value 2) "-")
 					  (t "e")))))
 
@@ -41,6 +41,6 @@
 (defun start ()
   (with-open-file (*my-error-log* "error.log" :direction :output :if-exists :supersede)
 	 (let ((map-area (list (initialize-map-area 80 220) 80 220))
-			 (player '(25 . 75)))
+			 (player (list 25 75)))
 		(list map-area player)
 		(print-map-area map-area player))))
