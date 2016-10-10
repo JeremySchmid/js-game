@@ -51,20 +51,27 @@
 		(print-square player-loc row column)))
 
   (defun print-area (player-loc y-borders x-borders)
-	 (do ((row (aref y-borders 0) (1+ row)))
-		((> row (aref y-borders 1)))
+	 (do ((row (aref y-borders 1) (1- row)))
+		((< row (aref y-borders 0)))
 		(print-row player-loc row x-borders)
 		(format t "~%")))
+
+  (defun render-map (size)
+  (print-area (get-player-loc)
+					 (vector (- (aref (get-player-loc) 0) size)
+								(+ (aref (get-player-loc) 0) size))
+					 (vector (- (aref (get-player-loc) 1) size)
+								(+ (aref (get-player-loc) 1) size))))
 
   (defun init-area (y x)
 	 (let ((area (make-array (* x y) :element-type 'fixnum :initial-element 0)))
 		area))
 
   (defun map-generation (y x)
-	 (if (and (or (= (mod y 11) 0)
-					  (= (mod x 11) 0))
-				 (and (not (= (mod y 11) 5))
-						(not (= (mod x 11) 5))))
+	 (if (and (or (= (mod y 65) 0)
+					  (= (mod x 65) 0))
+				 (and (not (= (mod y 65) 33))
+						(not (= (mod x 65) 33))))
 		2
 		1))
 
