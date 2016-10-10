@@ -29,21 +29,21 @@
 			 (setf (aref return-loc (+ 2 is-x?)) b)))
 		return-loc))
 
-  (defun print-value (value)
-	 (format t (cond ((= value 0) "@")
-						  ((= value 1) ".")
-						  ((= value 2) "#")
-						  (t "e"))))
+  (defun tile-value-char (value)
+	 (cond ((= value 0) "@")
+			 ((= value 1) ".")
+			 ((= value 2) "#")
+			 (t "e")))
 
   (defun get-tile-value (row column)
 	 (aref (get-loaded-area (get-chunk row) (get-chunk column))
 			 (+ (* (get-rel-coord row) chunk-size) (get-rel-coord column))))
 
   (defun print-square (player-loc row column)
-		(if (and (equal (aref player-loc 0) row)
-					(equal (aref player-loc 1) column))
-		  (print-value 0)
-		  (print-value (get-tile-value row column))))
+	 (princ (if (and (equal (aref player-loc 0) row)
+						  (equal (aref player-loc 1) column))
+				 (tile-value-char 0)
+				 (tile-value-char (get-tile-value row column)))))
 
   (defun print-row (player-loc row x-borders)
 	 (do ((column (aref x-borders 0) (1+ column))) 
@@ -61,10 +61,10 @@
 		area))
 
   (defun map-generation (y x)
-	 (if (and (or (= (mod y 17) 0)
-					  (= (mod x 17) 0))
-				 (and (not (= (mod y 17) 9))
-						(not (= (mod x 17) 9))))
+	 (if (and (or (= (mod y 11) 0)
+					  (= (mod x 11) 0))
+				 (and (not (= (mod y 11) 5))
+						(not (= (mod x 11) 5))))
 		2
 		1))
 

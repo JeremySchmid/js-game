@@ -1,4 +1,4 @@
-(let ((player-loc #(25 25 0.3 -0.2)))
+(let ((player-loc #(25 25 0.0 0.0)))
 
   (defun get-player-loc ()
 	 (values player-loc))
@@ -10,6 +10,5 @@
 	 (case num
 		((1 4 7) (setf (aref player-loc 3) (- (aref player-loc 3) 1.0)))
 		((3 6 9) (setf (aref player-loc 3) (+ (aref player-loc 3) 1.0))))
-	 (setf player-loc (recanon-loc player-loc))
-	 (render 20))
+	 (setf player-loc (recanon-loc player-loc)))
   )

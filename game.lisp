@@ -1,27 +1,35 @@
-
 (defparameter *path-prefix* "projects/game/")
+(defparameter *my-error-log* nil)
+(defparameter *my-main-window* nil)
 
 (load (concatenate 'string *path-prefix* "graphics.lisp"))
 (load (concatenate 'string *path-prefix* "maps.lisp"))
 (load (concatenate 'string *path-prefix* "player.lisp"))
 
-(defparameter *my-error-log* nil)
+(defun initialize-game ()
+  (setf *my-error-log* (open "error.log" :direction :output :if-exists :supersede))
+  (initialize-main-window))
 
-(defparameter *element-list* '((1 (floor)) (2 (wall))))
+(defun close-down ()
+  (close *my-error-log*)
+  (close-glfw-and-window))
 
-(defun render (size)
+(defun render-map (size)
   (print-area (get-player-loc)
 					 (vector (- (aref (get-player-loc) 0) size)
 								(+ (aref (get-player-loc) 0) size))
 					 (vector (- (aref (get-player-loc) 1) size)
 								(+ (aref (get-player-loc) 1) size))))
 
-(defun start ()
-  (with-open-file (*my-error-log* (concatenate 'string *path-prefix* "error.log")
-											 :direction :output
-											 :if-exists :supersede)
-	 (render 35)))
+(defun run-game (main-window)
+  (unless (%glfw:window-should-close-p main-window)
+	 (input-processing)
+	 (update)
+	 (render)
+	 (run-game main-window)))
 
-(defun run-game ()
+(defun start ()
   (load (concatenate 'string *path-prefix* "game.lisp"))
-  (start))
+  (let ((main-window (initialize-game)))
+	 (run-game main-window))
+  (close-down))
