@@ -1,7 +1,3 @@
-(ql:quickload "cl-glu")
-(ql:quickload "cl-glfw3")
-(ql:quickload "alexandria")
-
 (let ((main-window nil)
 		(verts nil)
 		(vertex-positions nil)
@@ -90,9 +86,6 @@
 		  (gl:delete-shader shader))
 		gl-program))
 
-  (defun input-processing ()
-	 (%glfw:poll-events))
-
   (defun get-color (value)
 	 (case value
 		((0) '(1.0 0.0 1.0 1.0))
@@ -122,26 +115,31 @@
 			 (square-width (/ 2.0 width))
 			 (rect-list nil)
 			 (color-list nil)
-			 (center-y (- 0.0 (aref center 2)))
-			 (center-x (- 0.0 (aref center 3)))
 			 (num-triangles 0))
+		(flet ((add-square-positions (y-pos x-pos colors)
+											  (let ((y (* (- y-pos (aref center 0)) square-height))
+														(x (* (- x-pos (aref center 1)) square-width)))
+											  (push (apply #'get-verts-positions (calc-borders y x square-height square-width)) rect-list)
+											  (push colors color-list)
+											  (setf num-triangles (+ 2 num-triangles)))))
 
-		(push (apply #'get-verts-positions (calc-borders 0.0 0.0 square-height square-width)) rect-list)
-		(push (get-color-sequence (get-color :player)) color-list)
-		(setf num-triangles (+ 2 num-triangles))
 
-		(do ((y-offset (- (floor (/ height 2.0))) (1+ y-offset)))
+		  (dolist (id (get-agent-id-list))
+			 (let* ((agent (gethash id (get-agent-table)))
+					  (loc (agent-location agent))
+					  (color (get-color-sequence (get-color (agent-kind agent)))))
+				(add-square-positions (aref loc 0) (aref loc 1) color)))
 
-		  ((not (<= y-offset (ceiling (/ height 2.0)))))
-		  (do ((x-offset (- (floor (/ width 2.0))) (1+ x-offset)))
-		    ((not (<= x-offset (ceiling (/ width 2.0)))))
-			 (let ((y (+ center-y (* y-offset square-height)))
-					 (x (+ center-x (* x-offset square-width))))
-				(push (apply #'get-verts-positions (calc-borders y x square-height square-width)) rect-list)
-				(push (get-verts-colors (+ y-offset (aref center 0)) (+ x-offset (aref center 1))) color-list))
-				(setf num-triangles (+ 2 num-triangles))))
-		(setf verts (concatenate 'vector (alexandria:flatten rect-list) (alexandria:flatten color-list)))
-		(values num-triangles)))
+		  (do ((y-pos (+ (aref center 0) (- (floor (/ height 2.0)))) (1+ y-pos)))
+			 ((not (<= y-pos (+ (aref center 0) (ceiling (/ height 2.0))))))
+			 (do ((x-pos (+ (aref center 1) (- (floor (/ width 2.0)))) (1+ x-pos)))
+				((not (<= x-pos (+ (aref center 1) (ceiling (/ width 2.0))))))
+				(let ((colors (get-verts-colors y-pos x-pos)))
+
+				  (add-square-positions y-pos x-pos colors))))
+
+		  (setf verts (concatenate 'vector (alexandria:flatten rect-list) (alexandria:flatten color-list)))
+		  (values num-triangles))))
 
   (defun render (center) 
 	 (let ((num-triangles (setup-verts center height width)))
@@ -175,27 +173,6 @@
 
   (glfw:def-error-callback glfw-error-callback (description)
 									(write-line (concatenate 'string "Error: " description) *my-error-log*))
-
-  ;; replace with a "key-processor" adding pressed (repeated?) and released keys to a/the queue used for the input, maybe with a time-tag for when it was done
-  ;; input processing will need to be dependent on whether game is in realtime or turnbased mode -> needs to be done in the queue processing, not this callback function - processing should either be done in the update portion of the loop before the physics update or in a function before (update) - model-view-controller separation
-  ;; view is the opengl stuff->translates physics data to onscreen stuff
-  ;; model is the worlddata and physics rules/functions->updates the world
-  ;; controller is the input stuff->translates the multiple possible input-types into the actions/flags/functions - what the model should do
-
-  (glfw:def-key-callback glfw-key-callback (window key scancode action mods)
-								 (declare (ignore scancode mods))
-								 (if (and (eq key :escape)
-											 (or (eq action :press)
-												  (eq action :repeat)))
-									(%glfw:set-window-should-close window t))
-								 (cond ((and (eq action :press) (eq key :9)) (walk 9))
-										 ((and (eq action :press) (eq key :8)) (walk 8))
-										 ((and (eq action :press) (eq key :7)) (walk 7))
-										 ((and (eq action :press) (eq key :6)) (walk 6))
-										 ((and (eq action :press) (eq key :4)) (walk 4))
-										 ((and (eq action :press) (eq key :3)) (walk 3))
-										 ((and (eq action :press) (eq key :2)) (walk 2))
-										 ((and (eq action :press) (eq key :1)) (walk 1))))
 
   (glfw:def-window-size-callback glfw-window-size-callback (window width height)
 											(declare (ignore window))

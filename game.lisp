@@ -1,8 +1,14 @@
+(ql:quickload "cl-glu")
+(ql:quickload "cl-glfw3")
+(ql:quickload "alexandria")
+
 (defparameter *path-prefix* "projects/game/")
 (defparameter *my-error-log* nil)
 (defparameter *my-main-window* nil)
+(defparameter *update-queue* nil)
 
-(load (concatenate 'string *path-prefix* "player.lisp"))
+(load (concatenate 'string *path-prefix* "agents.lisp"))
+(load (concatenate 'string *path-prefix* "input.lisp"))
 (load (concatenate 'string *path-prefix* "graphics.lisp"))
 (load (concatenate 'string *path-prefix* "maps.lisp"))
 
@@ -10,10 +16,29 @@
 
 (defun initialize-game ()
   (setf *my-error-log* (open "error.log" :direction :output :if-exists :supersede))
+  (initialize-agent :player #(1 1))
+  (initialize-agent :enemy (vector (random 20) (random 20)))
+  (initialize-agent :enemy (vector (random 20) (random 20)))
+  (initialize-agent :enemy (vector (random 20) (random 20)))
   (initialize-main-window))
 
+(defun exec-key (key)
+  (case key
+	 ((:9) (walk 9))
+	 ((:8) (walk 8))
+	 ((:7) (walk 7))
+	 ((:6) (walk 6))
+	 ((:4) (walk 4))
+	 ((:3) (walk 3))
+	 ((:2) (walk 2))
+	 ((:1) (walk 1))
+	 (t (princ "not found"))))
+
 (defun update ()
-  ())
+  (dolist (key *update-queue*)
+	 (exec-key key))
+  (setf *update-queue* nil)
+  (update-agents))
 
 (defun close-down ()
   (close *my-error-log*)
@@ -23,11 +48,12 @@
   (unless (%glfw:window-should-close-p main-window)
 	 (input-processing)
 	 (update)
-	 (render (get-player-loc))
+	 (render (agent-location (get-player)))
 	 (run-game main-window)))
 
 (defun start ()
   (load (concatenate 'string *path-prefix* "game.lisp"))
   (let ((main-window (initialize-game)))
+	 (setf *my-main-window* main-window)
 	 (run-game main-window))
   (close-down))

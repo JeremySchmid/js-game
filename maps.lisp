@@ -1,5 +1,4 @@
 (let ((chunk-size 256)
-		(coord-size 1.0)
 		(loaded-chunks-table (make-hash-table :test 'equal))
 		(loaded-chunks-list nil))
 
@@ -14,20 +13,6 @@
 
   (defun get-chunk-coord (chunk-x)
 	 (* chunk-x chunk-size))
-
-  (defun recanon-coord (float-x)
-	 (multiple-value-bind (coord flot) (floor (+ float-x (/ coord-size 2.0)) coord-size)
-		(setf flot (- flot (/ coord-size 2)))
-		(values coord flot)))
-
-  (defun recanon-loc (map-location)
-	 (let ((return-loc map-location))
-		(do ((is-x? 0 (1+ is-x?)))
-		  ((> is-x? 1))
-		  (multiple-value-bind (a b) (recanon-coord (aref return-loc (+ 2 is-x?)))
-			 (setf (aref return-loc (+ 0 is-x?)) (+ a (aref return-loc (+ 0 is-x?))))
-			 (setf (aref return-loc (+ 2 is-x?)) b)))
-		return-loc))
 
   (defun tile-value-char (value)
 	 (cond ((= value 0) "@")
@@ -57,11 +42,11 @@
 		(format t "~%")))
 
   (defun render-map (size)
-  (print-area (get-player-loc)
-					 (vector (- (aref (get-player-loc) 0) size)
-								(+ (aref (get-player-loc) 0) size))
-					 (vector (- (aref (get-player-loc) 1) size)
-								(+ (aref (get-player-loc) 1) size))))
+  (print-area (agent-location (get-player))
+					 (vector (- (aref (agent-location (get-player)) 0) size)
+								(+ (aref (agent-location (get-player)) 0) size))
+					 (vector (- (aref (agent-location (get-player)) 1) size)
+								(+ (aref (agent-location (get-player)) 1) size))))
 
   (defun init-area (y x)
 	 (let ((area (make-array (* x y) :element-type 'fixnum :initial-element 0)))
