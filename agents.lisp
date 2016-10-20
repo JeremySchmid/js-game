@@ -29,38 +29,44 @@
 	  (kind :accessor agent-kind
 			  :initarg :kind)))
 
-  (defun make-agent (kind location)
+  (defun gen-enemy-loc ()
+	 (let ((prospect (list (random 20) (random 20))))
+		(if (check-empty-p prospect)
+		  prospect
+		  (gen-enemy-loc))))
+
+  (defun make-agent (kind)
 	 (case kind
 		((:player) (make-instance 'agent
-										  :location location
-										  :damage #(3 0 0)
-										  :health #(20 7)
-										  :max-health #(20 7)
-										  :regen #(0.33 0.5)
-										  :defense #(1 0 0)
+										  :location '(1 1)
+										  :damage '(3 0 0)
+										  :health '(20 7)
+										  :max-health '(20 7)
+										  :regen '(0.33 0.5)
+										  :defense '(1 0 0)
 										  :effects nil
 										  :kind kind))
 		((:object) (make-instance 'agent
-										  :location location
-										  :damage #(0 0 0)
-										  :health #(100 25)
-										  :max-health #(100 25)
-										  :regen #(2.0 1.0)
-										  :defense #(2 1 1)
+										  :location #(1 1)
+										  :damage '(0 0 0)
+										  :health '(100 25)
+										  :max-health '(100 25)
+										  :regen '(2.0 1.0)
+										  :defense '(2 1 1)
 										  :effects nil
 										  :kind kind))
-		(t (make-instance 'agent
+		((:enemy t) (let ((location (gen-enemy-loc))) (make-instance 'agent
 								:location location
-								:damage #(1 0 0)
-								:health #(5 2)
-								:max-health #(5 2)
-								:regen #(.34 0.17)
-								:defense #(0 0 0)
+								:damage '(1 0 0)
+								:health '(5 2)
+								:max-health '(5 2)
+								:regen '(.34 0.17)
+								:defense '(0 0 0)
 								:effects nil
-								:kind kind))))
+								:kind kind)))))
   
-  (defun initialize-agent (kind location)
-	 (let* ((agent (make-agent kind location))
+  (defun initialize-agent (kind)
+	 (let* ((agent (make-agent kind))
 			  (id (agent-id agent)))
 		(push id agent-id-list)
 		(setf (gethash id agent-table) agent)
@@ -78,18 +84,25 @@
 	 (gethash player-id agent-table))
 
   (defun move-direction (loc num)
-	 (let ((vec loc))
+	 (let ((vec (copy-list loc)))
 		(case num
-		  ((1 2 3) (setf (aref vec 0) (- (aref loc 0) 1)))
-		  ((7 8 9) (setf (aref vec 0) (+ (aref loc 0) 1))))
+		  ((1 2 3) (setf (nth 0 vec) (- (nth 0 loc) 1)))
+		  ((7 8 9) (setf (nth 0 vec) (+ (nth 0 loc) 1))))
 		(case num
-		  ((1 4 7) (setf (aref vec 1) (- (aref loc 1) 1)))
-		  ((3 6 9) (setf (aref vec 1) (+ (aref loc 1) 1))))
+		  ((1 4 7) (setf (nth 1 vec) (- (nth 1 loc) 1)))
+		  ((3 6 9) (setf (nth 1 vec) (+ (nth 1 loc) 1))))
 		(values vec)))
 	 
+	(defun hash-values (hash-table)
+	  (loop for key being the hash-keys of hash-table collect (gethash key hash-table)))
+	
+	(defun check-empty-p (target-loc)
+	  (and (= (apply #'get-tile-value target-loc) 1)
+					(not (member target-loc (mapcar #'agent-location (hash-values agent-table)) :test 'equal))))
 
-  (defun walk (num)
-	 (let ((player (get-player)))
-		(setf (agent-location player) (move-direction (agent-location player) num))
-		(render-map 30)))
+  (defun move (agent num)
+	 (let ((target-loc (move-direction (agent-location agent) num)))
+		(if (check-empty-p target-loc)
+		  (setf (agent-location agent) target-loc))))
+
   )
