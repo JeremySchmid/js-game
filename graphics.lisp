@@ -1,13 +1,14 @@
-(let ((main-window nil)
-		(verts nil)
-		(vertex-positions nil)
-		(position-buffer-object nil)
-		(vertex-shader nil)
-		(fragment-shader nil)
-		(gl-program nil)
-		(vao-id nil)
-		(height 54)
-		(width 96))
+(let* ((main-window nil)
+		 (position-buffer-object nil)
+		 (vertex-shader nil)
+		 (fragment-shader nil)
+		 (gl-program nil)
+		 (vao-id nil)
+		 (height 108)
+		 (width 192)
+		 ; (* number-of-squares tri-per-square floats-per-tri 3)
+		 ; the 3 is bc the number of agents necessarily makes it bigger, and memorys cheap af
+		 (gl-array (gl:alloc-gl-array :float  (* height width 2 96 3))))
 
   (defun string-from-file (path)
 	 (with-open-file (file path)
@@ -15,36 +16,15 @@
 		  (read-sequence data file)
 		  data)))
 
-  (defun fill-gl-array (gl-array data-array)
-	 "Fills gl-array <gl-array> with <data-array> of type cl:array, <data-array>'s contents will be COERCEd to SINGLE-FLOAT"
-	 (if (and (typep gl-array 'gl:gl-array)
-				 (arrayp data-array)
-				 (= (gl::gl-array-size gl-array)
-					 (length data-array)))
-		(dotimes (offset (length data-array))
-		  (setf
-			 (cffi:mem-aref (gl::gl-array-pointer gl-array) :float offset)
-			 (coerce (aref data-array offset) 'single-float)))
-		(progn
-		  (print "couldn't fill gl-array, either size of gl-array and data-array don't")
-		  (print "match or they aren't of proper type"))))
-
-  (defun create-gl-array-from-vector (vector-of-floats)
-	 (let* ((array-length (length vector-of-floats))
-			  (gl-array (gl:alloc-gl-array :float array-length)))
-		(fill-gl-array gl-array vector-of-floats)
-		gl-array))
-
-  (defun setup-vertex-buffer ()
-	 (setf position-buffer-object (first (gl:gen-buffers 1)))
+  (defun setup-vertex-buffer (vertex-positions)
 	 (gl:bind-buffer :array-buffer position-buffer-object)
-	 (gl:buffer-data :array-buffer :stream-draw vertex-positions)
+	 (gl:buffer-data :array-buffer :static-draw vertex-positions)
 	 (gl:bind-buffer :array-buffer 0))
 
   ;;shader functions:
-  (setf vertex-shader (string-from-file "../../source/projects/game/data/FragPosition.vert"))
+  (setf vertex-shader (string-from-file "projects/game/data/FragPosition.vert"))
 
-  (setf fragment-shader (string-from-file "../../source/projects/game/data/FragPosition.frag"))
+  (setf fragment-shader (string-from-file "projects/game/data/FragPosition.frag"))
 
   (defun create-shader (shader-type shader-string)
 	 (let ((shader (gl:create-shader shader-type))
@@ -98,11 +78,8 @@
   (defun get-tile-color (y x)
 	 (get-color (get-tile-value y x)))
 
-  (defun get-color-sequence (a)
-	 (concatenate 'list a a a a a a))
-
   (defun get-verts-colors (y x)
-	 (get-color-sequence (get-tile-color y x)))
+	 (get-tile-color y x))
 
   (defun get-verts-positions (bottom top left right)
 	 (list left top 0.0 1.0 right top 0.0 1.0 left bottom 0.0 1.0 right top 0.0 1.0 left bottom 0.0 1.0 right bottom 0.0 1.0))
@@ -110,43 +87,66 @@
   (defun calc-borders (y x height width)
 	 (list (- y (/ height 2.0)) (+ y (/ height 2.0)) (- x (/ width 2.0)) (+ x (/ width 2.0))))
 
+  (defun is-onscreen-p (loc top bottom left right)
+	 (if (and (>= (nth 0 loc) top)
+				 (<= (nth 0 loc) bottom)
+				 (>= (nth 1 loc) left)
+				 (<= (nth 1 loc) right))
+		t
+		nil))
+
   (defun setup-verts (center height width)
 	 (let ((square-height (/ 2.0 height))
 			 (square-width (/ 2.0 width))
-			 (rect-list nil)
-			 (color-list nil)
+			 (top (+ (nth 0 center) (- (floor (/ height 2.0)))))
+			 (bottom (+ (nth 0 center) (ceiling (/ height 2.0))))
+			 (left (+ (nth 1 center) (- (floor (/ width 2.0)))))
+			 (right (+ (nth 1 center) (ceiling (/ width 2.0))))
+			 (vert-index 0)
 			 (num-triangles 0))
-		(flet ((add-square-positions (y-pos x-pos colors)
+		(flet ((add-square-positions (y-pos x-pos)
 											  (let ((y (* (- y-pos (nth 0 center)) square-height))
-														(x (* (- x-pos (nth 1 center)) square-width)))
-											  (push (apply #'get-verts-positions (calc-borders y x square-height square-width)) rect-list)
-											  (push colors color-list)
-											  (setf num-triangles (+ 2 num-triangles)))))
+													  (x (* (- x-pos (nth 1 center)) square-width)))
+												 (dolist (vertex (apply #'get-verts-positions (calc-borders y x square-height square-width)))
+													(setf (cffi:mem-aref (gl::gl-array-pointer gl-array) :float vert-index) vertex)
+													(setf vert-index (1+ vert-index)))
+												 (setf num-triangles (+ 2 num-triangles))))
+				 (add-square-colors (colors)
+										  (dotimes (repeat 6)
+											 (dolist (color colors)
+												(setf (cffi:mem-aref (gl::gl-array-pointer gl-array) :float vert-index) color)
+												(setf vert-index (1+ vert-index))))))
 
+			 (do ((y-pos top (1+ y-pos)))
+				((not (<= y-pos bottom)))
+				(do ((x-pos left (1+ x-pos)))
+				  ((not (<= x-pos right)))
+				  (add-square-positions y-pos x-pos)))
 
-		  (dolist (id (get-agent-id-list))
-			 (let* ((agent (gethash id (get-agent-table)))
-					  (loc (agent-location agent))
-					  (color (get-color-sequence (get-color (agent-kind agent)))))
-				(add-square-positions (nth 0 loc) (nth 1 loc) color)))
+			 (dolist (id (get-agent-id-list))
+				(let* ((agent (gethash id (get-agent-table)))
+						 (loc (agent-location agent)))
+				  (if (is-onscreen-p loc top bottom left right)
+					 (add-square-positions (nth 0 loc) (nth 1 loc)))))
 
-		  (do ((y-pos (+ (nth 0 center) (- (floor (/ height 2.0)))) (1+ y-pos)))
-			 ((not (<= y-pos (+ (nth 0 center) (ceiling (/ height 2.0))))))
-			 (do ((x-pos (+ (nth 1 center) (- (floor (/ width 2.0)))) (1+ x-pos)))
-				((not (<= x-pos (+ (nth 1 center) (ceiling (/ width 2.0))))))
-				(let ((colors (get-verts-colors y-pos x-pos)))
+			 (do ((y-pos top (1+ y-pos)))
+				((not (<= y-pos bottom)))
+				(do ((x-pos left (1+ x-pos)))
+				  ((not (<= x-pos right)))
+				  (add-square-colors (get-verts-colors y-pos x-pos))))
 
-				  (add-square-positions y-pos x-pos colors))))
+			 (dolist (id (get-agent-id-list))
+				(let* ((agent (gethash id (get-agent-table)))
+						 (loc (agent-location agent)))
+				  (if (is-onscreen-p loc top bottom left right)
+					 (add-square-colors (get-color (agent-kind agent))))))
 
-		  (setf verts (concatenate 'vector (alexandria:flatten rect-list) (alexandria:flatten color-list)))
-		  (values num-triangles))))
+			 (values num-triangles))))
 
-  (defun render (center) 
+  (defun render (center)
 	 (let ((num-triangles (setup-verts center height width)))
 
-		(setf vertex-positions (create-gl-array-from-vector verts))
-
-		(setup-vertex-buffer)
+		(setup-vertex-buffer gl-array)
 
 		(gl:clear-color 0.5 1.0 0.2 0.0)
 		(gl:clear :color-buffer-bit)
@@ -189,7 +189,7 @@
 	 (%glfw:window-hint (cffi:foreign-enum-value '%glfw:window-hint :decorated) 0)
 	 (%glfw:window-hint (cffi:foreign-enum-value '%glfw:window-hint :resizable) 0)
 
-	 (setf main-window (%glfw:create-window 960 540 "GPOS" (cffi:null-pointer) (cffi:null-pointer)))
+	 (setf main-window (%glfw:create-window 1280 720 "GPOS" (cffi:null-pointer) (cffi:null-pointer)))
 
 	 (%glfw:make-context-current main-window)
 
@@ -197,6 +197,7 @@
 	 (glfw:set-window-size-callback 'glfw-window-size-callback main-window)
 
 	 (setf gl-program (initialize-program))
+	 (setf position-buffer-object (first (gl:gen-buffers 1)))
 
 	 (%glfw:swap-interval 1)
 	 main-window)

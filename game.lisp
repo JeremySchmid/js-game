@@ -12,7 +12,13 @@
 (load (concatenate 'string *path-prefix* "graphics.lisp"))
 (load (concatenate 'string *path-prefix* "maps.lisp"))
 
-(declaim (optimize (debug 3) (safety 3)))
+(declaim (optimize (debug 3)))
+;(declaim (optimize (speed 3) (space 2) (debug 0) (safety 0)))
+
+;(compile-file (concatenate 'string *path-prefix* "agents.lisp"))
+;(compile-file (concatenate 'string *path-prefix* "input.lisp"))
+;(compile-file (concatenate 'string *path-prefix* "graphics.lisp"))
+;(compile-file (concatenate 'string *path-prefix* "maps.lisp"))
 
 (defun initialize-game ()
   (setf *my-error-log* (open "error.log" :direction :output :if-exists :supersede))
