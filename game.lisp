@@ -2,24 +2,26 @@
 (ql:quickload "cl-glfw3")
 (ql:quickload "alexandria")
 
-(defparameter *path-prefix* "projects/game/")
 (defparameter *my-error-log* nil)
 (defparameter *my-main-window* nil)
 (defparameter *update-queue* nil)
 
-(load (concatenate 'string *path-prefix* "agents.lisp"))
-(load (concatenate 'string *path-prefix* "input.lisp"))
-(load (concatenate 'string *path-prefix* "graphics.lisp"))
-(load (concatenate 'string *path-prefix* "maps.lisp"))
-
-(declaim (optimize (debug 3)))
+(declaim (optimize (debug 3) (safety 3) (speed 1) (space 0)))
 ;(declaim (optimize (speed 3) (space 2) (debug 0) (safety 0)))
 
-;(compile-file (concatenate 'string *path-prefix* "agents.lisp"))
-;(compile-file (concatenate 'string *path-prefix* "input.lisp"))
-;(compile-file (concatenate 'string *path-prefix* "graphics.lisp"))
-;(compile-file (concatenate 'string *path-prefix* "maps.lisp"))
+(defun list-keys (table)
+  (loop for key being the hash-keys of table collect key))
 
+(defun list-hash-values (table)
+  (loop for key in (list-keys table)
+		  collect (gethash key table)))
+
+(load "agents.lisp")
+(load "input.lisp")
+(load "tiles.lisp")
+(load "maps.lisp")
+(load "graphics.lisp")
+	
 (defun initialize-game ()
   (setf *my-error-log* (open "error.log" :direction :output :if-exists :supersede))
   (initialize-agent :player)
@@ -40,11 +42,15 @@
 	 ((:1 :kp-1) (move (get-player) 1))
 	 (t (princ "not found~%"))))
 
-	(defun update ()
+(defun update ()
   (dolist (key *update-queue*)
 	 (exec-key key))
-  (setf *update-queue* nil)
-  (update-agents))
+  (update-agents)
+  (dolist (visible-tile (list-keys (agent-visible-tiles (get-player))))
+	 (let ((y-offset (nth 0 visible-tile))
+			 (x-offset (nth 1 visible-tile)))
+		(set-tile-memory y-offset x-offset (get-tile-value y-offset x-offset))))
+  (setf *update-queue* nil))
 
 (defun close-down ()
   (close *my-error-log*)
@@ -58,7 +64,7 @@
 	 (run-game main-window)))
 
 (defun start ()
-  (load (concatenate 'string *path-prefix* "game.lisp"))
+  (load "game.lisp")
   (let ((main-window (initialize-game)))
 	 (setf *my-main-window* main-window)
 	 (run-game main-window))

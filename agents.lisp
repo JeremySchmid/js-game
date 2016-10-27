@@ -11,6 +11,8 @@
   (defclass agent ()
 	 ((location :accessor agent-location
 					:initarg :location)
+	  (visible-tiles :accessor agent-visible-tiles
+							 :initform (make-hash-table :test 'equal))
 	  (damage :accessor agent-damage
 				 :initarg :damage)
 	  (health :accessor agent-health
@@ -28,6 +30,10 @@
 				  :initarg :effects)
 	  (kind :accessor agent-kind
 			  :initarg :kind)))
+
+	(defun check-empty-p (target-loc)
+	  (and (floor-p (apply #'get-tile-value target-loc))
+					(not (member target-loc (mapcar #'agent-location (list-hash-values agent-table)) :test 'equal))))
 
   (defun gen-enemy-loc ()
 	 (let ((prospect (list (random 20) (random 20))))
@@ -73,12 +79,13 @@
 		(if (eq kind :player)
 		  (setf player-id id))))
   
-  (defun update-agent (id agent)
-	 (declare (ignore id agent)))
+  (defun update-agent (agent)
+	 (setf (agent-visible-tiles agent) (make-hash-table :test 'equal))
+	 (full-compute-visible-tiles (agent-visible-tiles agent) (agent-location agent)))
 
   (defun update-agents ()
 	 (loop for id in agent-id-list
-			 do (update-agent id (gethash id agent-table))))
+			 do (update-agent (gethash id agent-table))))
   
   (defun get-player ()
 	 (gethash player-id agent-table))
@@ -92,13 +99,6 @@
 		  ((1 4 7) (setf (nth 1 vec) (- (nth 1 loc) 1)))
 		  ((3 6 9) (setf (nth 1 vec) (+ (nth 1 loc) 1))))
 		(values vec)))
-	 
-	(defun hash-values (hash-table)
-	  (loop for key being the hash-keys of hash-table collect (gethash key hash-table)))
-	
-	(defun check-empty-p (target-loc)
-	  (and (= (apply #'get-tile-value target-loc) 1)
-					(not (member target-loc (mapcar #'agent-location (hash-values agent-table)) :test 'equal))))
 
   (defun move (agent num)
 	 (let ((target-loc (move-direction (agent-location agent) num)))
