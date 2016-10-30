@@ -9,11 +9,11 @@
 (declaim (optimize (debug 3) (safety 3) (speed 1) (space 0)))
 ;(declaim (optimize (speed 3) (space 2) (debug 0) (safety 0)))
 
-(defun list-keys (table)
+(defun hash-keys (table)
   (loop for key being the hash-keys of table collect key))
 
-(defun list-hash-values (table)
-  (loop for key in (list-keys table)
+(defun hash-values (table)
+  (loop for key in (hash-keys table)
 		  collect (gethash key table)))
 
 (load "agents.lisp")
@@ -25,6 +25,8 @@
 (defun initialize-game ()
   (setf *my-error-log* (open "error.log" :direction :output :if-exists :supersede))
   (initialize-agent :player)
+  (initialize-agent :item)
+  (initialize-agent :item)
   (initialize-agent :enemy)
   (initialize-agent :enemy)
   (initialize-agent :enemy)
@@ -46,7 +48,7 @@
   (dolist (key *update-queue*)
 	 (exec-key key))
   (update-agents)
-  (dolist (visible-tile (list-keys (agent-visible-tiles (get-player))))
+  (dolist (visible-tile (hash-keys (agent-visible-tiles (get-player))))
 	 (let ((y-offset (nth 0 visible-tile))
 			 (x-offset (nth 1 visible-tile)))
 		(set-tile-memory y-offset x-offset (get-tile-value y-offset x-offset))))

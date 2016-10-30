@@ -71,17 +71,18 @@
   (defun get-color (value)
 	 (case value
 		((0) '(1.0 0.0 1.0 1.0))
-		((1) '(0.5 0.5 0.5 1.0))
+		((1) '(0.3 0.3 0.3 1.0))
 		((2) '(1.0 1.0 1.0 1.0))
 		((:player) '(0.0 1.0 1.0 1.0))
 		((:enemy) '(1.0 0.0 0.0 1.0))
+		((:item) '(1.0 1.0 0.0 1.0))
 		(otherwise '(0.2 0.2 1.0 1.0))))
 
   (defun get-verts-positions (bottom top left right)
 	 (list left top 0.0 1.0 right top 0.0 1.0 left bottom 0.0 1.0 right top 0.0 1.0 left bottom 0.0 1.0 right bottom 0.0 1.0))
 
-  (defun calc-borders (y x height width)
-	 (list (- y (/ height 2.0)) (+ y (/ height 2.0)) (- x (/ width 2.0)) (+ x (/ width 2.0))))
+  (defun calc-borders (y x y-float x-float height width)
+	 (list (- (+ y y-float) (/ height 2.0)) (+ (+ y y-float) (/ height 2.0)) (- (+ x x-float) (/ width 2.0)) (+ (+ x x-float) (/ width 2.0))))
 
   (defun is-onscreen-p (loc top bottom left right)
 	 (if (and (>= (nth 0 loc) top)
@@ -94,16 +95,18 @@
   (defun setup-verts (center height width)
 	 (let ((square-height (/ 2.0 height))
 			 (square-width (/ 2.0 width))
-			 (bottom (+ (nth 0 center) (- (floor (/ height 2.0)))))
-			 (top (+ (nth 0 center) (ceiling (/ height 2.0))))
-			 (left (+ (nth 1 center) (- (floor (/ width 2.0)))))
-			 (right (+ (nth 1 center) (ceiling (/ width 2.0))))
+			 (bottom (+ (abs-of (y-of center)) (- (floor (/ height 2.0)))))
+			 (top (+ (abs-of (y-of center)) (ceiling (/ height 2.0))))
+			 (left (+ (abs-of (x-of center)) (- (floor (/ width 2.0)))))
+			 (right (+ (abs-of (x-of center)) (ceiling (/ width 2.0))))
 			 (vert-index 0)
 			 (num-triangles 0))
-		(flet ((add-square-positions (y-pos x-pos)
-											  (let ((y (* (- y-pos (nth 0 center)) square-height))
-													  (x (* (- x-pos (nth 1 center)) square-width)))
-												 (dolist (vertex (apply #'get-verts-positions (calc-borders y x square-height square-width)))
+		(flet ((add-square-positions (location height width)
+											  (let ((y (* (- (abs-of (y-of location)) (abs-of (y-of center))) square-height))
+													  (x (* (- (abs-of (x-of location)) (abs-of (x-of center))) square-width))
+													  (y-float (* (- (rel-of (y-of location)) (rel-of (y-of center))) square-height))
+													  (x-float (* (- (rel-of (x-of location)) (rel-of (x-of center))) square-height)))
+												 (dolist (vertex (apply #'get-verts-positions (calc-borders y x y-float x-float height width)))
 													(setf (cffi:mem-aref (gl::gl-array-pointer gl-array) :float vert-index) vertex)
 													(incf vert-index))
 												 (incf num-triangles 2)))
@@ -116,32 +119,27 @@
 		  (loop for y-pos from bottom to top
 				  do (loop for x-pos from left to right
 							  do (if (gethash (pair y-pos x-pos) (agent-visible-tiles (get-player)))
-									 (add-square-positions y-pos x-pos)
+									 (add-square-positions (point (coord y-pos 0.0) (coord x-pos 0.0)) square-height square-width)
 									 (if (not (= 0 (get-tile-memory y-pos x-pos)))
-										(add-square-positions y-pos x-pos)))))
+										(add-square-positions (point (coord y-pos 0.0) (coord x-pos 0.0)) square-height square-width)))))
 
-		  (dolist (id (get-agent-id-list))
-			 (let* ((agent (gethash id (get-agent-table)))
-					  (loc (agent-location agent)))
-				(if (and (is-onscreen-p loc bottom top left right)
-							(<= (abs (- (nth 0 loc) (nth 0 (agent-location (get-player))))) 50)
-							(<= (abs (- (nth 1 loc) (nth 1 (agent-location (get-player))))) 50))
-				  (add-square-positions (nth 0 loc) (nth 1 loc)))))
+		  (let ((visible-agents (agent-visible-agents (get-player))))
+			 (dolist (agent (hash-values visible-agents))
+				(let ((loc (agent-location agent)))
+					 (add-square-positions loc square-height square-width))))
 
 		  (loop for y-pos from bottom to top
 				  do (loop for x-pos from left to right
 							  do (if (gethash (pair y-pos x-pos) (agent-visible-tiles (get-player)))
 									 (add-square-colors (get-color (get-tile-value y-pos x-pos)))
 									 (if (not (= 0 (get-tile-memory y-pos x-pos)))
-									   (add-square-colors (mapcar #'* (get-color (get-tile-memory y-pos x-pos)) '(0.7 0.7 0.7 1.0)))))))
+										(add-square-colors (mapcar #'* (get-color (get-tile-memory y-pos x-pos)) '(0.5 0.5 0.5 1.0)))))))
 
-		  (dolist (id (get-agent-id-list))
-			 (let* ((agent (gethash id (get-agent-table)))
-					  (loc (agent-location agent)))
-				(if (and (is-onscreen-p loc bottom top left right)
-							(<= (abs (- (nth 0 loc) (nth 0 (agent-location (get-player))))) 50)
-							(<= (abs (- (nth 1 loc) (nth 1 (agent-location (get-player))))) 50))
-				  (add-square-colors (get-color (agent-kind agent))))))
+
+
+		  (let ((visible-agents (agent-visible-agents (get-player))))
+			 (dolist (agent (hash-values visible-agents))
+				  (add-square-colors (get-color (agent-kind agent)))))
 
 		  (values num-triangles))))
 

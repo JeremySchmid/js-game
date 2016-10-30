@@ -1,9 +1,5 @@
 (let ((agent-table (make-hash-table :test 'equal))
-		(agent-id-list nil)
 		(player-id nil))
-
-  (defun get-agent-id-list ()
-	 agent-id-list)
 
   (defun get-agent-table ()
 	 agent-table)
@@ -11,32 +7,39 @@
   (defclass agent ()
 	 ((location :accessor agent-location
 					:initarg :location)
+	  (visible-agents :accessor agent-visible-agents
+							:initform (make-hash-table :test 'equal))
 	  (visible-tiles :accessor agent-visible-tiles
-							 :initform (make-hash-table :test 'equal))
+						  :initform (make-hash-table :test 'equal))
+	  (collision :accessor agent-collision
+					 :initarg :collision)
 	  (damage :accessor agent-damage
 				 :initarg :damage)
 	  (health :accessor agent-health
 				 :initarg :health)
 	  (max-health :accessor agent-max-health
-				 :initarg :max-health)
+					  :initarg :max-health)
 	  (regen :accessor agent-regen
 				:initarg :regen)
 	  (defense :accessor agent-defense
-				 :initarg :defense)
+				  :initarg :defense)
 	  (id :accessor agent-id
-			  :initform (gensym)
-			  :initarg :id)
+			:initform (gensym)
+			:initarg :id)
 	  (effects :accessor agent-effects
 				  :initarg :effects)
 	  (kind :accessor agent-kind
 			  :initarg :kind)))
 
-	(defun check-empty-p (target-loc)
-	  (and (floor-p (apply #'get-tile-value target-loc))
-					(not (member target-loc (mapcar #'agent-location (list-hash-values agent-table)) :test 'equal))))
+  (defun agent-solid-p (agent)
+	 (agent-collision agent))
+
+  (defun check-empty-p (target-loc)
+	 (and (floor-p (get-tile-value (abs-of (y-of target-loc)) (abs-of (x-of target-loc))))
+			(not (member target-loc (mapcar #'agent-location (remove-if-not #'agent-solid-p (hash-values agent-table))) :test 'equal))))
 
   (defun gen-enemy-loc ()
-	 (let ((prospect (list (random 20) (random 20))))
+	 (let ((prospect (point (coord (random 20) 0.0) (coord (random 20) 0.0))))
 		(if (check-empty-p prospect)
 		  prospect
 		  (gen-enemy-loc))))
@@ -44,7 +47,8 @@
   (defun make-agent (kind)
 	 (case kind
 		((:player) (make-instance 'agent
-										  :location '(1 1)
+										  :location (point (coord 1 0.0) (coord 1 0.0))
+										  :collision t
 										  :damage '(3 0 0)
 										  :health '(20 7)
 										  :max-health '(20 7)
@@ -52,53 +56,64 @@
 										  :defense '(1 0 0)
 										  :effects nil
 										  :kind kind))
-		((:object) (make-instance 'agent
-										  :location #(1 1)
-										  :damage '(0 0 0)
-										  :health '(100 25)
-										  :max-health '(100 25)
-										  :regen '(2.0 1.0)
-										  :defense '(2 1 1)
-										  :effects nil
-										  :kind kind))
-		((:enemy t) (let ((location (gen-enemy-loc))) (make-instance 'agent
-								:location location
-								:damage '(1 0 0)
-								:health '(5 2)
-								:max-health '(5 2)
-								:regen '(.34 0.17)
-								:defense '(0 0 0)
-								:effects nil
-								:kind kind)))))
-  
+		((:item) (make-instance 'agent
+										:location (gen-enemy-loc)
+										:collision nil
+										:damage '(0 0 0)
+										:health '(100 25)
+										:max-health '(100 25)
+										:regen '(2.0 1.0)
+										:defense '(2 1 1)
+										:effects nil
+										:kind kind))
+		((:enemy t) (make-instance 'agent
+											:location (gen-enemy-loc)
+											:collision t
+											:damage '(1 0 0)
+											:health '(5 2)
+											:max-health '(5 2)
+											:regen '(.34 0.17)
+											:defense '(0 0 0)
+											:effects nil
+											:kind kind))))
+
   (defun initialize-agent (kind)
 	 (let* ((agent (make-agent kind))
 			  (id (agent-id agent)))
-		(push id agent-id-list)
 		(setf (gethash id agent-table) agent)
 		(if (eq kind :player)
 		  (setf player-id id))))
-  
+
+  (defun compute-visible-agents (visible-agents-table origin
+																		&optional (visible-tiles-table (full-compute-visible-tiles (make-hash-table :test 'equal) origin)))
+	 (let ((visible-tiles (hash-keys visible-tiles-table)))
+		(dolist (agent (hash-values agent-table))
+		  (let ((agent-loc (agent-location agent)))
+			 (if (member agent-loc visible-tiles :test 'equal)
+				(setf (gethash agent-loc visible-agents-table) agent))))))
+
   (defun update-agent (agent)
 	 (setf (agent-visible-tiles agent) (make-hash-table :test 'equal))
-	 (full-compute-visible-tiles (agent-visible-tiles agent) (agent-location agent)))
+	 (full-compute-visible-tiles (agent-visible-tiles agent) (agent-location agent))
+	 (setf (agent-visible-agents agent) (make-hash-table :test 'equal))
+	 (compute-visible-agents (agent-visible-agents agent) (agent-location agent) (agent-visible-tiles agent)))
 
   (defun update-agents ()
-	 (loop for id in agent-id-list
-			 do (update-agent (gethash id agent-table))))
-  
+	 (dolist (agent (hash-values agent-table))
+		(update-agent agent)))
+
   (defun get-player ()
 	 (gethash player-id agent-table))
 
   (defun move-direction (loc num)
-	 (let ((vec (copy-list loc)))
-		(case num
-		  ((1 2 3) (setf (nth 0 vec) (- (nth 0 loc) 1)))
-		  ((7 8 9) (setf (nth 0 vec) (+ (nth 0 loc) 1))))
-		(case num
-		  ((1 4 7) (setf (nth 1 vec) (- (nth 1 loc) 1)))
-		  ((3 6 9) (setf (nth 1 vec) (+ (nth 1 loc) 1))))
-		(values vec)))
+	 (point (case num
+				 ((1 2 3) (add-distance-to-coord -1 (y-of loc)))
+				 ((7 8 9) (add-distance-to-coord 1 (y-of loc)))
+				 (t (y-of loc)))
+			  (case num
+				 ((1 4 7) (add-distance-to-coord -1 (x-of loc)))
+				 ((3 6 9) (add-distance-to-coord 1 (x-of loc)))
+				 (t (x-of loc)))))
 
   (defun move (agent num)
 	 (let ((target-loc (move-direction (agent-location agent) num)))
