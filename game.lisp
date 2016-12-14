@@ -16,10 +16,10 @@
   (loop for key in (hash-keys table)
 		  collect (gethash key table)))
 
+(load "maps.lisp")
+(load "tiles.lisp")
 (load "agents.lisp")
 (load "input.lisp")
-(load "tiles.lisp")
-(load "maps.lisp")
 (load "graphics.lisp")
 	
 (defun initialize-game ()
@@ -32,22 +32,8 @@
   (initialize-agent :enemy)
   (initialize-main-window))
 
-(defun exec-key (key)
-  (case key
-	 ((:9 :kp-9) (move (get-player) 9))
-	 ((:8 :kp-8) (move (get-player) 8))
-	 ((:7 :kp-7) (move (get-player) 7))
-	 ((:6 :kp-6) (move (get-player) 6))
-	 ((:4 :kp-4) (move (get-player) 4))
-	 ((:3 :kp-3) (move (get-player) 3))
-	 ((:2 :kp-2) (move (get-player) 2))
-	 ((:1 :kp-1) (move (get-player) 1))
-	 (t (princ "not found~%"))))
-
 (defun update ()
-  (dolist (key *update-queue*)
-	 (exec-key key))
-  (update-agents)
+  (update-agents *update-queue*)
   (dolist (visible-tile (hash-keys (agent-visible-tiles (get-player))))
 	 (let ((y-offset (nth 0 visible-tile))
 			 (x-offset (nth 1 visible-tile)))

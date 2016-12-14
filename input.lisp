@@ -9,8 +9,8 @@
 (glfw:def-key-callback
   glfw-key-callback (window key scancode action mods)
   (declare (ignore scancode mods))
-  (if (eq key :escape)
-	 (%glfw:set-window-should-close window t)
-	 (if (or (eq action :press)
-				(eq action :repeat))
-		(setf *update-queue* (append *update-queue* (list key))))))
+	 (if (eq key :escape)
+		(%glfw:set-window-should-close window t)
+		(if (or (eq action :press)
+				  (eq action :repeat))
+		  (setf *update-queue* (append *update-queue* (list key))))))
