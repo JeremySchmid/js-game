@@ -47,31 +47,31 @@
 		((:player) (make-instance 'agent
 										  :location (point (coord 1 0.0) (coord 1 0.0))
 										  :collision t
-										  :damage '(3 0 0)
-										  :health '(20 7)
-										  :max-health '(20 7)
-										  :regen '(0.33 0.5)
-										  :defense '(1 0 0)
+										  :damage 3
+										  :health 20
+										  :max-health 20
+										  :regen 0.33
+										  :defense 1
 										  :effects nil
 										  :kind kind))
 		((:item) (make-instance 'agent
 										:location (gen-enemy-loc)
 										:collision nil
-										:damage '(0 0 0)
-										:health '(100 25)
-										:max-health '(100 25)
-										:regen '(2.0 1.0)
-										:defense '(2 1 1)
+										:damage 2
+										:health 100
+										:max-health 100
+										:regen 2.0
+										:defense 5
 										:effects nil
 										:kind kind))
 		((:enemy t) (make-instance 'agent
 											:location (gen-enemy-loc)
 											:collision t
-											:damage '(1 0 0)
-											:health '(5 2)
-											:max-health '(5 2)
-											:regen '(.34 0.17)
-											:defense '(0 0 0)
+											:damage 1
+											:health 5
+											:max-health 5
+											:regen .34
+											:defense 0
 											:effects nil
 											:kind kind))))
 
