@@ -21,7 +21,7 @@
 (load "agents.lisp")
 (load "input.lisp")
 (load "graphics.lisp")
-	
+
 (defun initialize-game ()
   (setf *my-error-log* (open "error.log" :direction :output :if-exists :supersede))
   (initialize-agent :player)
@@ -47,7 +47,9 @@
 (defun run-game (main-window)
   (unless (%glfw:window-should-close-p main-window)
 	 (input-processing)
-	 (update)
+	 (if *update-queue*
+		(update)
+		(compute-vision (get-player)))
 	 (render (agent-location (get-player)))
 	 (run-game main-window)))
 
