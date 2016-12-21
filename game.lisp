@@ -1,7 +1,3 @@
-(ql:quickload "cl-glu")
-(ql:quickload "cl-glfw3")
-(ql:quickload "alexandria")
-
 (defparameter *my-error-log* nil)
 (defparameter *my-main-window* nil)
 (defparameter *update-queue* nil)

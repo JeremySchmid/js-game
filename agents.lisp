@@ -107,6 +107,17 @@
   (defun add-ticks (agent num)
 	 (setf (agent-ticks agent) (+ num (agent-ticks agent))))
 
+  (defun pick-up (agent)
+	 (let ((lst))
+	 (dolist (id (hash-values (agent-visible-agents agent)))
+		(if (equal (agent-location agent) (agent-location (get-agent (id))))
+		  (push id lst)))
+	 (setf lst (reverse lst))
+	 (dolist (item (mapcar #'get-agent lst))
+		(push item (agent-inventory agent))
+		(setf (agent-location item) (agent-id agent)))
+	 )
+
   (defun exec-key (key agent)
 	 (case key
 		((9 :9 :kp-9) (move agent 9))
@@ -118,6 +129,7 @@
 		((3 :3 :kp-3) (move agent 3))
 		((2 :2 :kp-2) (move agent 2))
 		((1 :1 :kp-1) (move agent 1))
+		((:comma) (pick-up agent))
 		(t (format *my-error-log* "Key not found~%"))))
 
   (defun insert-before (list position new-element)
