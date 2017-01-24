@@ -184,7 +184,7 @@
 			  (if (eq (agent-kind agent) :player)
 				 (if (eq commands nil)
 					(return)
-					(setf command (pop commands))))
+					(setf command (car (pop commands)))))
 			  (if (exec-key command agent)
 				 (sort-ticks-list)))))
 

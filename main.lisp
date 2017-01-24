@@ -5,13 +5,7 @@
 (declaim (optimize (debug 3) (safety 3) (speed 1) (space 0)))
 ;(declaim (optimize (speed 3) (space 2) (debug 0) (safety 0)))
 
-(defun hash-keys (table)
-  (loop for key being the hash-keys of table collect key))
-
-(defun hash-values (table)
-  (loop for key in (hash-keys table)
-		  collect (gethash key table)))
-
+(load "js-lib.lisp")
 (load "maps.lisp")
 (load "tiles.lisp")
 (load "agents.lisp")
