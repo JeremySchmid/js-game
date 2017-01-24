@@ -1,5 +1,9 @@
+(ql:quickload "alexandria")
 (ql:quickload "cl-glu")
 (ql:quickload "cl-glfw3")
-(ql:quickload "alexandria")
 
-(load "game.lisp")
+(defpackage :js-game
+  (:use :cl))
+(in-package :js-game)
+
+(load "main.lisp")

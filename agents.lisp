@@ -27,14 +27,17 @@
 			  :initarg :kind)
 	  (ticks :accessor agent-ticks
 				:initarg :ticks
-				:initform 0)))
-
-  (defmacro get-agent (_id)
-	 `(gethash ,_id agent-table))
+				:initform 0)
+	  (inventory :accessor agent-inventory
+					 :initarg nil
+					 :initform :inventory)))
 
 (let ((agent-table (make-hash-table :test 'equal))
 		(move-ticks-list nil)
 		(player-id nil))
+
+  (defun get-agent (id)
+	 (gethash id agent-table))
 
   (defun get-player ()
 	 (get-agent player-id))
@@ -78,7 +81,7 @@
   (defun initialize-agent (kind)
 	 (let* ((agent (make-agent kind))
 			  (id (agent-id agent)))
-		(setf (get-agent id) agent)
+		(setf (gethash id agent-table) agent)
 		(push id move-ticks-list)
 		(if (eq kind :player)
 		  (setf player-id id))))
@@ -108,15 +111,16 @@
 	 (setf (agent-ticks agent) (+ num (agent-ticks agent))))
 
   (defun pick-up (agent)
-	 (let ((lst))
-	 (dolist (id (hash-values (agent-visible-agents agent)))
-		(if (equal (agent-location agent) (agent-location (get-agent (id))))
-		  (push id lst)))
-	 (setf lst (reverse lst))
-	 (dolist (item (mapcar #'get-agent lst))
-		(push item (agent-inventory agent))
-		(setf (agent-location item) (agent-id agent)))
-	 )
+	 (let ((lst nil))
+		(dolist (id (hash-values (agent-visible-agents agent)))
+		  (if (equal (agent-location agent) (agent-location (get-agent id)))
+			 (push id lst)))
+		(setf lst (reverse lst))
+		(dolist (item (mapcar #'get-agent lst))
+		  (push item (agent-inventory agent))
+		  (setf (agent-location item) (agent-id agent)))
+
+		))
 
   (defun exec-key (key agent)
 	 (case key

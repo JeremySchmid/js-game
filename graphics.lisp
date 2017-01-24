@@ -58,7 +58,7 @@
 		  (gl:detach-shader gl-program shader))
 		gl-program))
 
-  (defun initialize-program ()
+  (defun initialize-gl-program ()
 	 (let* ((shader-list
 				 (list
 					(create-shader :vertex-shader vertex-shader)
@@ -196,7 +196,7 @@
 	 (glfw:set-key-callback 'glfw-key-callback main-window)
 	 (glfw:set-window-size-callback 'glfw-window-size-callback main-window)
 
-	 (setf gl-program (initialize-program))
+	 (setf gl-program (initialize-gl-program))
 	 (setf position-buffer-object (first (gl:gen-buffers 1)))
 
 	 (%glfw:swap-interval 1)
