@@ -7,5 +7,5 @@
 		  collect (gethash key table)))
 
 (defmacro toggle (var)
-  `(setf ,var (not ,var))
+  `(setf ,var (not ,var)))
 
