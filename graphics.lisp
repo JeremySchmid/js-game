@@ -9,7 +9,7 @@
 		 (height 108)
 		 (width 192)
 		 ; (* number-of-squares tri-per-square floats-per-tri 3)
-		 ; the 3 is bc the number of agents necessarily makes it bigger, and memorys cheap af
+		 ; the 3 is bc the number of objects necessarily makes it bigger, and memorys cheap af
 		 (gl-array (gl:alloc-gl-array :float  (* height width 2 96 3))))
 
   (defun string-from-file (path)
@@ -123,23 +123,30 @@
 									 (if (not (= 0 (get-tile-memory y-pos x-pos)))
 										(add-square-positions (point (coord y-pos 0.0) (coord x-pos 0.0)) square-height square-width)))))
 
-		  (let ((visible-agents (agent-visible-agents (get-player))))
-			 (dolist (agent (hash-values visible-agents))
-				(let ((loc (agent-location agent)))
-					 (add-square-positions loc square-height square-width))))
+		  (loop for item in (remove-if #'(lambda (object) (if (eq (object-kind object) :item) nil t))
+												  (hash-values (agent-visible-objects (get-player))))
+				  do (let ((loc (object-location item)))
+					 (add-square-positions loc square-height square-width)))
 
-		  (loop for y-pos from bottom to top
-				  do (loop for x-pos from left to right
-							  do (if (gethash (pair y-pos x-pos) (agent-visible-tiles (get-player)))
-									 (add-square-colors (get-color (get-tile-value y-pos x-pos)))
-									 (if (not (= 0 (get-tile-memory y-pos x-pos)))
-										(add-square-colors (mapcar #'* (get-color (get-tile-memory y-pos x-pos)) '(0.5 0.5 0.5 1.0)))))))
+		  (loop for agent in (remove-if #'(lambda (object) (if (eq (object-kind object) :item) t nil))
+												  (hash-values (agent-visible-objects (get-player))))
+				  do (let ((loc (object-location agent)))
+					 (add-square-positions loc square-height square-width)))
 
+			 (loop for y-pos from bottom to top
+					 do (loop for x-pos from left to right
+								 do (if (gethash (pair y-pos x-pos) (agent-visible-tiles (get-player)))
+										(add-square-colors (get-color (get-tile-value y-pos x-pos)))
+										(if (not (= 0 (get-tile-memory y-pos x-pos)))
+										  (add-square-colors (mapcar #'* (get-color (get-tile-memory y-pos x-pos)) '(0.5 0.5 0.5 1.0)))))))
 
+		  (loop for item in (remove-if #'(lambda (object) (if (eq (object-kind object) :item) nil t))
+												  (hash-values (agent-visible-objects (get-player))))
+				  do (add-square-colors (get-color :item)))
 
-		  (let ((visible-agents (agent-visible-agents (get-player))))
-			 (dolist (agent (hash-values visible-agents))
-				  (add-square-colors (get-color (agent-kind agent)))))
+		  (loop for agent in (remove-if #'(lambda (object) (if (eq (object-kind object) :item) t nil))
+												  (hash-values (agent-visible-objects (get-player))))
+				  do (add-square-colors (get-color (object-kind agent))))
 
 		  (values num-triangles))))
 

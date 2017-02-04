@@ -1,3 +1,5 @@
+(in-package :js-game)
+
 (defparameter *my-error-log* nil)
 (defparameter *my-main-window* nil)
 (defparameter *update-queue* nil)
@@ -8,18 +10,18 @@
 (load "js-lib.lisp")
 (load "maps.lisp")
 (load "tiles.lisp")
-(load "agents.lisp")
+(load "objects.lisp")
 (load "input.lisp")
 (load "graphics.lisp")
 
 (defun initialize-program ()
   (setf *my-error-log* (open "error.log" :direction :output :if-exists :supersede))
-  (initialize-agent :player)
-  (initialize-agent :item)
-  (initialize-agent :item)
-  (initialize-agent :enemy)
-  (initialize-agent :enemy)
-  (initialize-agent :enemy)
+  (initialize-object :player)
+  (initialize-object :item)
+  (initialize-object :item)
+  (initialize-object :enemy)
+  (initialize-object :enemy)
+  (initialize-object :enemy)
   (initialize-main-window))
 
 (defun update ()
@@ -40,7 +42,7 @@
 	 (if *update-queue*
 		(update)
 		(compute-vision (get-player)))
-	 (render (agent-location (get-player)))))
+	 (render (object-location (get-player)))))
 
 (defun start ()
   (load "main.lisp")
